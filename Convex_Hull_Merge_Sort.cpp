@@ -1,162 +1,157 @@
-#include <bits/stdc++.h>
-#include <ctime>
 #include <iostream>
-using namespace std;
+#include <vector>
+#include <random>
+#include <ctime>
+#include <iomanip>
+#include <fstream>
 
-struct Point
-{
-	int x, y;
+struct Point {
+    int x, y;
 };
 
-/*Determinant*/
-int determinant(Point a, Point b, Point c)
-{
-	int val = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y);
-
-	if (val == 0)
-	{
-		return 0;
-	}
-	else if (val > 0)
-	{
-		return 1;
-	}
-	else
-	{
-		return 2;
-	}
+/* Determinant (Orientation) */
+constexpr int determinant(const Point& a, const Point& b, const Point& c) {
+    int val = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y);
+    if (val == 0) return 0;
+    return (val > 0) ? 1 : 2;
 }
 
-/* CONVEX HULL*/
-void convexhull(Point points[], int n)
-{
-	vector<Point> hull;
-	int a = 0, c;
-
-	/*Adding points to HULL*/
-	do
-	{
-		hull.push_back(points[a]);
-		c = (a + 1) % n;
-		for (int i = 0; i < n; i++)
-		{
-			if (determinant(points[a], points[i], points[c]) == 2)
-			{
-				c = i;
-			}
-		}
-		a = c;
-	} while (a != 0);
-
-	/*Printing points on screen*/
-	cout << "Convex Hull Points:" << endl;
-	for (int i = 0; i < hull.size(); i++)
-	{
-		cout << "(" << hull[i].x << "," << hull[i].y << ")\n";
-	}
+/* Convex Hull (Jarvis March) */
+void convexhull(const std::vector<Point>& points, std::vector<Point>& hull) {
+    int n = points.size();
+    if (n < 3) return;
+    int a = 0, c;
+    do {
+        hull.push_back(points[a]);
+        c = (a + 1) % n;
+        for (int i = 0; i < n; i++) {
+            if (determinant(points[a], points[i], points[c]) == 2) {
+                c = i;
+            }
+        }
+        a = c;
+    } while (a != 0);
 }
 
-/*MERGE SORT*/
-void merge(struct Point coor[], int l, int m, int r)
-{
-	int i, j, k;
-	int n1 = m - l + 1;
-	int n2 = r - m;
-	struct Point L[n1];
-	struct Point R[n2];
+/* Merge Sort for Points */
+void merge(std::vector<Point>& coor, int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+    std::vector<Point> L(n1), R(n2);
 
-	for (i = 0; i < n1; i++)
-	{
-		L[i].x = coor[l + i].x;
-		L[i].y = coor[l + i].y;
-	}
-	for (j = 0; j < n2; j++)
-	{
-		R[j].x = coor[m + 1 + j].x;
-		R[j].y = coor[m + 1 + j].y;
-	}
+    for (int i = 0; i < n1; i++)
+        L[i] = coor[l + i];
+    for (int j = 0; j < n2; j++)
+        R[j] = coor[m + 1 + j];
 
-	i = 0;
-	j = 0;
-	k = l;
-	while (i < n1 && j < n2)
-	{
-		if (L[i].x <= R[j].x)
-		{
-			coor[k].x = L[i].x;
-			coor[k].y = L[i].y;
-			if (L[i].x == R[j].x)
-			{
-				if (L[i].y < R[j].y)
-				{
-					coor[k].y = L[i].y;
-				}
-				else
-				{
-					coor[k].y = R[j].y;
-				}
-			}
-			i++;
-		}
-		else
-		{
-			coor[k].x = R[j].x;
-			coor[k].y = R[j].y;
-			j++;
-		}
-		k++;
-	}
-	while (i < n1)
-	{
-		coor[k].x = L[i].x;
-		coor[k].y = L[i].y;
-		i++;
-		k++;
-	}
-	while (j < n2)
-	{
-		coor[k].x = R[j].x;
-		coor[k].y = R[j].y;
-		j++;
-		k++;
-	}
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+        if (L[i].x < R[j].x || (L[i].x == R[j].x && L[i].y <= R[j].y)) {
+            coor[k++] = L[i++];
+        } else {
+            coor[k++] = R[j++];
+        }
+    }
+    while (i < n1) coor[k++] = L[i++];
+    while (j < n2) coor[k++] = R[j++];
 }
 
-void mergeSort(struct Point coor[], int l, int r)
-{
-	if (l < r)
-	{
-		int m = l + (r - l) / 2;
-		mergeSort(coor, l, m);
-		mergeSort(coor, m + 1, r);
-		merge(coor, l, m, r);
-	}
+void mergeSort(std::vector<Point>& coor, int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+        mergeSort(coor, l, m);
+        mergeSort(coor, m + 1, r);
+        merge(coor, l, m, r);
+    }
 }
 
-int main()
-{
+int main(int argc, char* argv[]) {
+    int n = 100;
+    if (argc > 1) {
+        try {
+            n = std::stoi(argv[1]);
+        } catch (const std::invalid_argument&) {
+            std::cerr << "Invalid input for number of points, using default (100).\n";
+            n = 100;
+        } catch (const std::out_of_range&) {
+            std::cerr << "Input out of range for number of points, using default (100).\n";
+            n = 100;
+        }
+        if (n <= 0) {
+            std::cerr << "Number of points must be positive, using default (100).\n";
+            n = 100;
+        }
+    }
+    std::vector<Point> points(n);
 
-	int n = 100;
-	struct Point points[n];
-	struct timespec start, end;
-	srand(time(0));
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 1000);
 
-	for (int i = 0; i < n; i++)
-	{
-		points[i].x = rand() % 1001;
-		points[i].y = rand() % 1001;
-	}
+    for (int i = 0; i < n; i++) {
+        points[i].x = dis(gen);
+        points[i].y = dis(gen);
+    }
 
-	mergeSort(points, 0, n - 1);
-	clock_gettime(CLOCK_MONOTONIC, &start);
-	ios_base::sync_with_stdio(false);
+    mergeSort(points, 0, n - 1);
 
-	convexhull(points, n);
-	clock_gettime(CLOCK_MONOTONIC, &end);
+    std::vector<Point> hull;
 
-	double time_taken;
-	time_taken = (end.tv_sec - start.tv_sec) * 1e9;
-	time_taken = (time_taken + (end.tv_nsec - start.tv_nsec)) * 1e-9;
-	cout << "Time taken by program is : " << fixed << time_taken << setprecision(9) << " sec";
-	return 0;
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    convexhull(points, hull);
+
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    // Output points and hull to CSV with error checking
+    std::ofstream fout("points_and_hull.csv");
+    if (!fout.is_open() || fout.fail()) {
+        std::cerr << "Error: Could not open points_and_hull.csv for writing.\n";
+        return 1;
+    }
+
+    fout << "x,y,type\n";
+    if (fout.fail()) {
+        std::cerr << "Error: Failed to write CSV header.\n";
+        fout.close();
+        return 1;
+    }
+
+    for (const auto& p : points) {
+        fout << p.x << "," << p.y << ",point\n";
+        if (fout.fail()) {
+            std::cerr << "Error: Failed to write point to CSV.\n";
+            fout.close();
+            return 1;
+        }
+    }
+    for (const auto& p : hull) {
+        fout << p.x << "," << p.y << ",hull\n";
+        if (fout.fail()) {
+            std::cerr << "Error: Failed to write hull point to CSV.\n";
+            fout.close();
+            return 1;
+        }
+    }
+    // Connect last hull point to first for closed polygon
+    if (!hull.empty()) {
+        fout << hull.front().x << "," << hull.front().y << ",hull\n";
+        if (fout.fail()) {
+            std::cerr << "Error: Failed to write closing hull point to CSV.\n";
+            fout.close();
+            return 1;
+        }
+    }
+
+    fout.close();
+    if (fout.fail()) {
+        std::cerr << "Error: Failed to close CSV file properly.\n";
+        return 1;
+    }
+
+    long long time_taken_ns = (end.tv_sec - start.tv_sec) * 1000000000LL + (end.tv_nsec - start.tv_nsec);
+    std::cout << "Time taken by program is : " << time_taken_ns << " ns\n";
+
+    return 0;
 }
